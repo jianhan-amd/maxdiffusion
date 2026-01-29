@@ -351,6 +351,7 @@ def _generate_flux_sample(rng_key: jax.Array, dimensions: Dict[str, Any]) -> Dic
     latent_height = dimensions['latent_height']
     latent_width = dimensions['latent_width']
     latent_seq_len = dimensions['latent_seq_len']
+    loss_scaling_factor = 0.1 # magic factor for matching the flux loss.
     
     # Generate pixel values (packed latents) - should be float16 to match trainer
     pixel_values_shape = (per_host_batch_size, latent_seq_len, dimensions['packed_latent_dim'])
@@ -366,7 +367,7 @@ def _generate_flux_sample(rng_key: jax.Array, dimensions: Dict[str, Any]) -> Dic
     
     # Generate pooled prompt embeddings (CLIP)
     prompt_embeds_shape = (per_host_batch_size, dimensions['pooled_embed_dim'])
-    prompt_embeds = jax.random.normal(keys[3], shape=prompt_embeds_shape, dtype=jnp.float32)
+    prompt_embeds = loss_scaling_factor * jax.random.normal(keys[3], shape=prompt_embeds_shape, dtype=jnp.float32)
     
     # Generate image position IDs - matching pipeline.prepare_latent_image_ids
     # Create base img_ids for single sample (without batch dimension)
