@@ -25,7 +25,10 @@
 #
 #################################################################################
 
-ARG BASE_DOCKER=rocm/pyt-megatron-lm-jax-nightly-private:jax_rocm7.1_jax_0.7.1_20251215
+# ARG BASE_DOCKER=rocm/pyt-megatron-lm-jax-nightly-private:jax_rocm7.1_jax_0.7.1_20251215
+ARG BASE_DOCKER=rocm/pyt-megatron-lm-jax-nightly-private:jax_rocm7.0_jax_0.7.1_20251116
+# ARG BASE_DOCKER=rocm/pyt-megatron-lm-jax-nightly-private:jax_rocm7.0_jax_0.6.2_20251024
+# ARG BASE_DOCKER=rocm/mad-private:jax_rocm7.1_jax_0.8.2_ci_e5be0ef_20260131
 # ARG BASE_DOCKER=rocm/jax-training:maxtext-v25.11
 FROM $BASE_DOCKER
 USER root
@@ -65,44 +68,10 @@ RUN pip install \
     typeguard==2.13.3 \
     qwix==0.1.5 --no-deps
 
-#Download MaxDiffusion
-# RUN cd ${WORKSPACE_DIR} && \
-#     git clone https://github.com/AI-Hypercomputer/maxdiffusion.git && \
-#     cd maxdiffusion && \
-#     git reset --hard "07b4d29c4a9bbdaafa501299275dcb15b5365034" && \
-#     python3 setup.py develop
-# RUN cd ${WORKSPACE_DIR} && \
-#     git clone https://github.com/cpersson-amd/maxdiffusion.git && \
-#     cd maxdiffusion && \
-#     git reset --hard "07b4d29c4a9bbdaafa501299275dcb15b5365034" && \
-#     python3 setup.py develop
-
 # Display installed packages for verification
 RUN pip list
 
-# libaries for IB fabric
-RUN apt-get update
-RUN apt-get install -y libelf-dev unzip
-RUN apt-get install -y gcc make libtool autoconf librdmacm-dev rdmacm-utils infiniband-diags ibverbs-utils perftest ethtool libibverbs-dev rdma-core strace libibmad5 libibnetdisc5 ibverbs-providers libibumad-dev libibumad3 libibverbs1 libnl-3-dev libnl-route-3-dev
 
-WORKDIR $WORKSPACE_DIR/
-
-# The drivers should upgrade with each release and match the host version
-RUN wget https://docs.broadcom.com/docs-and-downloads/ethernet-network-adapters/NXE/Thor2/GCA1/bcm5760x_230.2.52.0a.zip
-RUN unzip bcm5760x_230.2.52.0a.zip
-RUN cd bcm5760x_230.2.52.0a/drivers_linux/bnxt_rocelib/ && \
-    results=$(find -name "libbnxt*.tar.gz") && tar -xf $results && \
-    untar_dir=$(find . -maxdepth 1 -type d -name "libbnxt*" ! -name "*.tar.gz" | head -n 1) && \
-    cd $untar_dir && sh autogen.sh && ./configure && make && \
-    find /usr/lib64/ /usr/lib -name "libbnxt_re-rdmav*.so" -exec mv {} {}.inbox \; && \
-    make install all && sudo sh -c "echo /usr/local/lib >> /etc/ld.so.conf" && \
-    sudo ldconfig && \
-    cp -f bnxt_re.driver /etc/libibverbs.d/ && \
-    find . -name "*.so" -exec md5sum {} \; && \
-    BUILT_MD5SUM=$(find . -name "libbnxt_re-rdmav*.so" -exec md5sum {} \; | cut -d " " -f 1) && \
-    echo -e "\n\nmd5sum of the built libbnxt_re is $BUILT_MD5SUM"
-
-RUN ibv_devices
 
 
 
