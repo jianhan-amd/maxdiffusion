@@ -4,119 +4,132 @@ Distributed WAN model training across multiple nodes with AMD ROCm GPUs.
 
 ## Quick Start
 
+### Option 1: Using Helper Script (Recommended)
+
 ```bash
 cd /home/amd/jianhan/github/maxdiffusion/multi_node
 
-# 1. Clean and sync codebase
+# Edit run_multinode_train.sh to set configuration and enable/disable steps
+bash run_multinode_train.sh
+```
+
+### Option 2: Manual Execution
+
+```bash
+# Set ALL required environment variables (no defaults)
+export COORDINATOR_IP="172.29.0.73"
+export IMAGE_TAG="maxdiffusion-multinode-train:v1"
+export MULTI_NODES_LOG_DIR="/home/amd/jianhan/multi_node_log"
+export SHARE_DOCKERFILE_PATH="/home/amd/jianhan/github/maxdiffusion/multi_node/docker/jax_maxdiffusion_wan2.1_train_inference.ubuntu.amd.Dockerfile"
+export SHARED_CODE_BASE_PATH="/home/amd/jianhan/github/maxdiffusion"
+export MAXDIFFUSION_DIR_IN_DOCKER="/app/maxdiffusion"
+export RUN_NAME="WAN_14B_FSDP8"
+export REMOVE_IMAGES="n"
+export CHMOD_RUN="n"
+export REGISTRY_USERNAME="rocmshared"
+export REGISTRY_TOKEN="your_token"
+
+# Run commands
 bash wan_multinode_train.sh "node1,node2,node3,node4" clean
-
-# 2. Build Docker images (only when Dockerfile changes)
 bash wan_multinode_train.sh "node1,node2,node3,node4" build
-
-# 3. Launch training
 bash wan_multinode_train.sh "node1,node2,node3,node4" launch
 
 # Monitor training
-tail -f ${MULTI_NODES_LOG_DIR}/slurm_logs/WAN_14B_FSDP8_*/node_*_rank_0.log
-```
-
-## SSH Keys Setup
-
-**Required: Password-less SSH access to all nodes**
-
-```bash
-# 1. Generate SSH key (if you don't have one)
-ssh-keygen -t ed25519 -C "multinode-training"
-
-# 2. Copy SSH key to all nodes
-for node in node1 node2 node3 node4; do
-    ssh-copy-id -i ~/.ssh/id_ed25519.pub user@$node
-done
-
-# 3. Test password-less access
-for node in node1 node2 node3 node4; do
-    ssh $node "hostname && date" || echo "FAILED: $node"
-done
-
-# 4. Optional: Add to ~/.ssh/config for easier access
-cat >> ~/.ssh/config << 'EOF'
-Host node1 node2 node3 node4
-    User your_username
-    IdentityFile ~/.ssh/id_ed25519
-    StrictHostKeyChecking no
-    UserKnownHostsFile=/dev/null
-EOF
+tail -f ${MULTI_NODES_LOG_DIR}/slurm_logs/${RUN_NAME}_*/node_*_rank_0.log
 ```
 
 ## Prerequisites
 
-- Password-less SSH access (see above)
-- Docker 20.10+ on all nodes
-- AMD ROCm 5.7+ with MI250/MI300 GPUs
-- Port 12345 open between nodes (JAX coordinator)
-- 50GB+ disk space per node
+- **Password-less SSH**: Set up SSH keys for all nodes
+  ```bash
+  ssh-keygen -t ed25519 -C "multinode-training"
+  for node in node1 node2 node3; do ssh-copy-id $node; done
+  ```
+- **Docker 20.10+** on all nodes
+- **AMD ROCm 5.7+** with MI250/MI300 GPUs
+- **Port 12345 open** between nodes (JAX coordinator)
+- **50GB+ disk space** per node
 
 ## Environment Variables
 
-```bash
-export COORDINATOR_IP="172.29.0.73"                    # JAX coordinator IP
-export IMAGE_TAG="maxdiffusion-multinode-train:v1"   # Docker image name
-export RUN_NAME="WAN_14B_FSDP8"                       # Experiment name
-export REMOVE_IMAGES="n"                              # Remove images on clean (y/n)
-export MULTI_NODES_LOG_DIR="/home/amd/jianhan/multi_node_log"  # Log dir
+**All variables are required (no defaults):**
 
-# Then run
-bash wan_multinode_train.sh "node1,node2" launch
-```
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `COORDINATOR_IP` | JAX coordinator IP | `172.29.0.73` |
+| `IMAGE_TAG` | Docker image name | `maxdiffusion-multinode-train:v1` |
+| `MULTI_NODES_LOG_DIR` | Base log directory | `/home/amd/jianhan/multi_node_log` |
+| `SHARE_DOCKERFILE_PATH` | Path to Dockerfile | `/home/amd/.../jax_maxdiffusion_wan2.1...Dockerfile` |
+| `SHARED_CODE_BASE_PATH` | Codebase path | `/home/amd/jianhan/github/maxdiffusion` |
+| `MAXDIFFUSION_DIR_IN_DOCKER` | Docker mount path | `/app/maxdiffusion` |
+| `RUN_NAME` | Experiment name | `WAN_14B_FSDP8` or `WAN_1_3B_FSDP8` |
+| `REMOVE_IMAGES` | Remove images on clean | `y` or `n` |
+| `CHMOD_RUN` | Only fix permissions (skip training) | `y` or `n` (default: `n`) |
+| `REGISTRY_USERNAME` | Docker Hub username | `rocmshared` |
+| `REGISTRY_TOKEN` | Docker Hub token | Your token |
 
 ## Scripts Overview
 
-### wan_multinode_train.sh (Wrapper)
-Main script for all operations: `clean`, `build`, `launch`
-
-### wan_multinode_train_clean.sh
-Cleans containers and syncs codebase to all nodes
-
-### wan_multinode_train_build_docker.sh
-Builds Docker images in parallel with retry logic (5 attempts)
-
-### wan_multinode_train_launch.sh
-Launches distributed training with JAX multi-process
+- **`run_multinode_train.sh`**: Helper script with pre-configured variables. Edit to set config and enable/disable steps
+- **`wan_multinode_train.sh`**: Main wrapper for clean/build/launch operations (requires all env vars)
+- **`wan_multinode_train_clean.sh`**: Cleans containers and syncs codebase via rsync
+- **`wan_multinode_train_build_docker.sh`**: Builds Docker images in parallel (5 retries)
+- **`wan_multinode_train_launch.sh`**: Launches distributed training with JAX
 
 ## Directory Structure
 
 ```
 multi_node_log/
 ├── slurm_logs/
-│   ├── CLEAN_*N_*/           # Cleanup logs
-│   ├── BUILD_DOCKER_*N_*/    # Build logs
-│   └── WAN_14B_FSDP8_*N_*/   # Training logs
+│   ├── CLEAN_*N_*/              # Cleanup logs
+│   ├── BUILD_DOCKER_*N_*/       # Build logs
+│   └── ${RUN_NAME}_*N_*/        # Training logs (e.g., WAN_14B_FSDP8_4N_20260204-141300)
+│       ├── node_*_rank_0.log    # Primary logs
+│       └── host_output.{out,err}
 └── output/
-    └── WAN_14B_FSDP8_*N_*/   # Checkpoints and outputs
+    └── ${RUN_NAME}_*N_*/        # Checkpoints
+```
+
+## Typical Workflow
+
+```bash
+# First time: Run all steps
+bash run_multinode_train.sh
+
+# Code changes: Skip build (edit run_multinode_train.sh, comment out build line)
+# Dockerfile changes: Run build only (comment out clean and launch)
+# Quick iteration: Run clean + launch only (comment out build)
 ```
 
 ## Common Commands
 
 ```bash
 # Change model
-export RUN_NAME="WAN_1_3B_FSDP8"  # or "FLUX_DEV_FSDP8"
+export RUN_NAME="WAN_1_3B_FSDP8"  # or WAN_14B_FSDP8
 
-# Use default nodes
-bash wan_multinode_train.sh "" clean
+# Remove Docker images (free disk space)
+export REMOVE_IMAGES="y"
+
+# Fix permissions only (no training) - useful for permission issues
+export CHMOD_RUN="y"
+bash wan_multinode_train.sh "node1,node2,node3,node4" launch
 
 # Monitor latest run
-LATEST=$(ls -td ${MULTI_NODES_LOG_DIR}/slurm_logs/WAN_14B_FSDP8_* | head -1)
+LATEST=$(ls -td ${MULTI_NODES_LOG_DIR}/slurm_logs/${RUN_NAME}_* | head -1)
 tail -f ${LATEST}/node_*_rank_0.log
 
-# Extract metrics
+# Average step time (exclude warmup)
 grep "seconds:" ${LATEST}/node_*_rank_0.log | tail -n +2 | \
-    awk -F'seconds: ' '{print $2}' | awk '{print $1}' | \
-    awk '{sum+=$1; count++} END {printf "Avg: %.2fs\n", sum/count}'
+    awk -F'seconds: ' '{print $2}' | awk '{sum+=$1; count++} END {printf "Avg: %.2fs\n", sum/count}'
 
 # Check GPU utilization
-for node in node1 node2; do
-    echo "=== $node ==="
+for node in core42-5-a08u01 core42-1-a08u07 core42-3-a08u19 core42-4-a08u25; do
     ssh $node "rocm-smi --showuse"
+done
+
+# Check containers
+for node in core42-5-a08u01 core42-1-a08u07; do
+    ssh $node "docker ps"
 done
 ```
 
@@ -129,103 +142,54 @@ done
 - **FPS/device**: ~1.03
 - **First step**: ~300s (JIT compilation)
 
+**Single Node**: For testing, omit node list (defaults to single node): `bash wan_multinode_train.sh "" launch`  
+Or specify: `bash wan_multinode_train.sh "core42-4-a08u25" launch`
+
 ## Troubleshooting
 
-### SSH Issues
 ```bash
-# Test connectivity
-ssh -vvv node1
+# SSH issues
+ssh -vvv node1  # Test connectivity
+eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519
 
-# Check SSH agent
-eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_ed25519
-```
+# Docker issues
+ssh node1 "docker ps"  # Check Docker
+ssh node1 "sudo usermod -aG docker $USER"  # Add to docker group
 
-### Docker Issues
-```bash
-# Check Docker
-ssh node1 "docker ps"
-
-# Add user to docker group
-ssh node1 "sudo usermod -aG docker $USER"
-```
-
-### JAX Initialization Timeout
-```bash
-# Check firewall (port 12345)
-ssh node1 "sudo iptables -L | grep 12345"
-
-# Test connectivity
-ssh node2 "nc -zv node1 12345"
-
-# Fix coordinator IP
-ssh node1 "hostname -I"  # Get correct IP
+# JAX timeout
+ssh node1 "hostname -I"  # Get coordinator IP
 export COORDINATOR_IP="172.29.0.XX"
-```
+ssh node2 "nc -zv $COORDINATOR_IP 12345"  # Test port
 
-### GPU Not Visible
-```bash
-# Check GPUs
-ssh node1 "rocm-smi"
+# GPU not visible
+ssh node1 "rocm-smi"  # Check GPUs
+ssh node1 "docker run --rm --privileged -e HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 ${IMAGE_TAG} rocm-smi"
 
-# Check in container
-ssh node1 "docker run --rm --privileged \
-    -e HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
-    maxdiffusion-multinode-train:v1 rocm-smi"
-```
-
-### Build Failures
-```bash
-# Check build logs
+# Build failures
 cat ${MULTI_NODES_LOG_DIR}/slurm_logs/BUILD_DOCKER_*/build_*.log
+ssh node1 "docker system prune -af"  # Clean cache
 
-# Clean Docker
-ssh node1 "docker system prune -af"
-```
+# Permission issues (codebase not writable)
+export CHMOD_RUN="y"
+bash wan_multinode_train.sh "node1,node2" launch  # Fix perms only
 
-### Debug Mode
-```bash
-# Enable verbose output
-bash -x wan_multinode_train.sh "node1,node2" clean
+# Debug mode
+bash -x wan_multinode_train.sh "node1,node2" clean  # Verbose
 ```
 
 ## Log Analysis
 
 ```bash
-LOG_DIR=$(ls -td ${MULTI_NODES_LOG_DIR}/slurm_logs/WAN_14B_FSDP8_* | head -1)
+# Find latest run
+LOG_DIR=$(ls -td ${MULTI_NODES_LOG_DIR}/slurm_logs/${RUN_NAME}_* | head -1)
 
-# Training metrics
-grep "seconds:" ${LOG_DIR}/node_*_rank_0.log
-grep "loss:" ${LOG_DIR}/node_*_rank_0.log
-grep "TFLOP/s/device:" ${LOG_DIR}/node_*_rank_0.log
+# View metrics
+grep "seconds:\|loss:\|TFLOP/s" ${LOG_DIR}/node_*_rank_0.log
 
-# Average step time (exclude warmup)
+# Calculate stats
 grep "seconds:" ${LOG_DIR}/node_*_rank_0.log | tail -n +2 | \
-    awk -F'seconds: ' '{sum+=$2; count++} END {print sum/count}'
+    awk -F'seconds: ' '{print $2}' | awk '{sum+=$1; count++} END {printf "Mean: %.2fs, Total: %d steps\n", sum/count, count}'
 ```
-
-## Advanced Configuration
-
-```bash
-# Custom Docker image
-export IMAGE_TAG="my-custom-wan:v1"
-
-# Custom coordinator IP (use InfiniBand)
-export COORDINATOR_IP="172.29.0.73"
-
-# Resume from checkpoint
-# Edit: src/maxdiffusion/configs/base_wan_14b.yml
-# Set: checkpoint_dir: "/path/to/checkpoint"
-```
-
-## File Locations
-
-| Item | Path |
-|------|------|
-| Scripts | `multi_node/wan_multinode_train*.sh` |
-| Logs | `${MULTI_NODES_LOG_DIR}/slurm_logs/${EXP_NAME}/` |
-| Outputs | `${MULTI_NODES_LOG_DIR}/output/${EXP_NAME}/` |
-| Configs | `src/maxdiffusion/configs/` |
 
 ## Resources
 

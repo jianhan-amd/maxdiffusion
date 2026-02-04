@@ -9,11 +9,11 @@
 #   bash wan_multinode_train_clean.sh "node1,node2,node3"
 #   bash wan_multinode_train_clean.sh  # Uses default node list
 # 
-# Environment Variables:
-#   IMAGE_TAG              - Docker image name (default: maxdiffusion-multinode-train:v1)
-#   REMOVE_IMAGES          - Remove Docker images? y/n (default: n)
-#   MULTI_NODES_LOG_DIR    - Base log directory (default: /home/amd/jianhan/multi_node_log)
-#   SHARED_CODE_BASE_PATH  - Codebase path to sync (default: /home/amd/jianhan/github/maxdiffusion)
+# Environment Variables (required - should be set by wrapper script):
+#   IMAGE_TAG              - Docker image name
+#   REMOVE_IMAGES          - Remove Docker images? y/n
+#   MULTI_NODES_LOG_DIR    - Base log directory
+#   SHARED_CODE_BASE_PATH  - Codebase path to sync
 #
 
 set -euo pipefail
@@ -28,7 +28,7 @@ readonly TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 # Node list - comma separated hostnames
 if [ -z "${1:-}" ]; then
     # Default node list (edit this as needed)
-    NODE_LIST="core42-5-a08u01,core42-1-a08u07,core42-3-a08u19,core42-4-a08u25"
+    NODE_LIST="core42-4-a08u25"
 else
     NODE_LIST="$1"
 fi
@@ -37,9 +37,9 @@ fi
 IFS=',' read -ra NODES <<< "$NODE_LIST"
 readonly NNODES=${#NODES[@]}
 
-# Docker configuration
-readonly IMAGE_TAG="${IMAGE_TAG:-maxdiffusion-multinode-train:v1}"
-readonly REMOVE_IMAGES="${REMOVE_IMAGES:-n}"
+# Docker configuration (should be set by wrapper script)
+readonly IMAGE_TAG="${IMAGE_TAG}"
+readonly REMOVE_IMAGES="${REMOVE_IMAGES}"
 
 # Determine if images should be removed
 if [[ "$REMOVE_IMAGES" =~ ^[Yy]$ ]]; then
@@ -48,9 +48,9 @@ else
     REMOVE_IMAGES_FLAG=false
 fi
 
-# Paths configuration
-readonly MULTI_NODES_LOG_DIR="${MULTI_NODES_LOG_DIR:-/home/amd/jianhan/multi_node_log}"
-readonly SHARED_CODE_BASE_PATH="${SHARED_CODE_BASE_PATH:-/home/amd/jianhan/github/maxdiffusion}"
+# Paths configuration (should be set by wrapper script)
+readonly MULTI_NODES_LOG_DIR="${MULTI_NODES_LOG_DIR}"
+readonly SHARED_CODE_BASE_PATH="${SHARED_CODE_BASE_PATH}"
 
 # Experiment name and log directory
 readonly EXP_NAME="CLEAN_${NNODES}N_${TIMESTAMP}"

@@ -25,11 +25,7 @@
 #
 #################################################################################
 
-# ARG BASE_DOCKER=rocm/pyt-megatron-lm-jax-nightly-private:jax_rocm7.1_jax_0.7.1_20251215
-ARG BASE_DOCKER=rocm/pyt-megatron-lm-jax-nightly-private:jax_rocm7.0_jax_0.7.1_20251116
-# ARG BASE_DOCKER=rocm/pyt-megatron-lm-jax-nightly-private:jax_rocm7.0_jax_0.6.2_20251024
-# ARG BASE_DOCKER=rocm/mad-private:jax_rocm7.1_jax_0.8.2_ci_e5be0ef_20260131
-# ARG BASE_DOCKER=rocm/jax-training:maxtext-v25.11
+ARG BASE_DOCKER=rocm/jax-training:maxtext-v25.11
 FROM $BASE_DOCKER
 USER root
 ENV WORKSPACE_DIR=/workspace

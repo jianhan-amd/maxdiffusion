@@ -9,13 +9,14 @@
 #   bash wan_multinode_train_launch.sh "node1,node2,node3"
 #   bash wan_multinode_train_launch.sh  # Uses default node list
 # 
-# Environment Variables:
-#   IMAGE_TAG                 - Docker image name (default: maxdiffusion-multinode-train:v1)
-#   COORDINATOR_IP            - JAX coordinator IP (default: 172.29.0.73)
-#   MULTI_NODES_LOG_DIR       - Base log directory (default: /home/amd/jianhan/multi_node_log)
-#   SHARED_CODE_BASE_PATH     - Codebase path (default: /home/amd/jianhan/github/maxdiffusion)
-#   MAXDIFFUSION_DIR_IN_DOCKER - Docker mount path (default: /app/maxdiffusion)
-#   RUN_NAME                  - Experiment name prefix (default: WAN_14B_FSDP8)
+# Environment Variables (required - should be set by wrapper script):
+#   IMAGE_TAG                 - Docker image name
+#   COORDINATOR_IP            - JAX coordinator IP
+#   MULTI_NODES_LOG_DIR       - Base log directory
+#   SHARED_CODE_BASE_PATH     - Codebase path
+#   MAXDIFFUSION_DIR_IN_DOCKER - Docker mount path
+#   RUN_NAME                  - Experiment name prefix
+#   CHMOD_RUN                 - for running a chmod on codebase only
 #
 
 set -euo pipefail
@@ -30,7 +31,7 @@ readonly TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 # Node list - comma separated hostnames
 if [ -z "${1:-}" ]; then
     # Default node list (edit this as needed)
-    NODE_LIST="core42-5-a08u01,core42-1-a08u07,core42-3-a08u19,core42-4-a08u25"
+    NODE_LIST="core42-4-a08u25"
 else
     NODE_LIST="$1"
 fi
@@ -39,19 +40,27 @@ fi
 IFS=',' read -ra NODES <<< "$NODE_LIST"
 readonly NNODES=${#NODES[@]}
 
-# Docker and training configuration
-readonly IMAGE_TAG="${IMAGE_TAG:-maxdiffusion-multinode-train:v1}"
-readonly COORDINATOR_IP="${COORDINATOR_IP:-172.29.0.73}"
+readonly CHMOD_RUN="${CHMOD_RUN}"
+# Determine if this is only a permission changing run
+if [[ "$CHMOD_RUN" =~ ^[Yy]$ ]]; then
+    CHMOD_RUN_FLAG=true
+else
+    CHMOD_RUN_FLAG=false
+fi
+
+# Docker and training configuration (should be set by wrapper script)
+readonly IMAGE_TAG="${IMAGE_TAG}"
+readonly COORDINATOR_IP="${COORDINATOR_IP}"
 readonly JAX_COORDINATOR_PORT=12345
 readonly COORDINATOR_TIMEOUT=1800
 
-# Paths configuration
-readonly MULTI_NODES_LOG_DIR="${MULTI_NODES_LOG_DIR:-/home/amd/jianhan/multi_node_log}"
-readonly SHARED_CODE_BASE_PATH="${SHARED_CODE_BASE_PATH:-/home/amd/jianhan/github/maxdiffusion}"
-readonly MAXDIFFUSION_DIR_IN_DOCKER="${MAXDIFFUSION_DIR_IN_DOCKER:-/app/maxdiffusion}"
+# Paths configuration (should be set by wrapper script)
+readonly MULTI_NODES_LOG_DIR="${MULTI_NODES_LOG_DIR}"
+readonly SHARED_CODE_BASE_PATH="${SHARED_CODE_BASE_PATH}"
+readonly MAXDIFFUSION_DIR_IN_DOCKER="${MAXDIFFUSION_DIR_IN_DOCKER}"
 
-# Experiment configuration
-readonly RUN_NAME="${RUN_NAME:-WAN_14B_FSDP8}"
+# Experiment configuration (should be set by wrapper script)
+readonly RUN_NAME="${RUN_NAME}"
 readonly EXP_NAME="${RUN_NAME}_${NNODES}N_${TIMESTAMP}"
 
 # Log and output directories
@@ -175,10 +184,14 @@ for i in "${!NODES[@]}"; do
                 # Set permissions
                 chmod 777 \\\"$MAXDIFFUSION_DIR_IN_DOCKER\\\" -R
                 
-                # Launch training
-                cd \\\"$MAXDIFFUSION_DIR_IN_DOCKER\\\"
-                echo \\\"Starting training...\\\"
-                bash launch.sh LOG_PATH=\\\"$OUTPUT_DIR_IN_DOCKER\\\"
+                if [ "$CHMOD_RUN_FLAG" = true ]; then
+                    echo "[${node}] Changing permissions completed for $SHARED_CODE_BASE_PATH"
+                else
+                    # Launch training
+                    cd \\\"$MAXDIFFUSION_DIR_IN_DOCKER\\\"
+                    echo \\\"Starting training...\\\"
+                    bash launch.sh LOG_PATH=\\\"$OUTPUT_DIR_IN_DOCKER\\\"
+                fi
             \"
     '" > "${LOG_DIR}/node_${node}_rank_${node_rank}.log" 2>&1 &
     

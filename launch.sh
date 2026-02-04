@@ -16,13 +16,11 @@ done
 
 # Set default log file if not provided
 if [ -z "$LOG_PATH" ]; then
-  LOG_PATH="$PWD/output/output_$EXP_NAME.log"
+  LOG_PATH="$PWD/output/"
 fi
 
 export HF_TOKEN=""
 export HF_HOME="/app/hf_home/"
-
-# export ROCR_VISIBLE_DEVICES="4,5,6,7"
 
 export MIOPEN_CUSTOM_CACHE_DIR="/app/.cache/miopen/"
 export JAX_COMPILATION_CACHE_DIR="/app/.cache/jax/"
@@ -54,7 +52,7 @@ export NVTE_CK_HOW_V3_BF16_CVT=1    # default
 export NVTE_ALLOW_NONDETERMINISTIC_ALGO=1
 
 export NCCL_IB_HCA=bnxt_re0,bnxt_re1,bnxt_re2,bnxt_re3,bnxt_re4,bnxt_re5,bnxt_re6,bnxt_re7
-export NCCL_SOCKET_IFNAME=ens51f1np1
+export NCCL_SOCKET_IFNAME=enp159s0np0
 export NCCL_IB_GID_INDEX=3
 export NCCL_PROTO=Simple
 
@@ -65,15 +63,14 @@ export GPU_MAX_HW_QUEUES=2
 export HIP_FORCE_DEV_KERNARG=1
 export HSA_NO_SCRATCH_RECLAIM=1
 # NCCL flags
-export NCCL_DEBUG=INFO  #WARN, INFO
+export NCCL_DEBUG=WARN  #WARN, INFO
 # export NCCL_DEBUG_SUBSYS=ALL
-# export RCCL_REPLAY_FILE=/shared_nfs/jianhan/slurm_logs-${SCALING_EXP}/cohere-${SLURM_JOB_NUM_NODES}N-8x22B-${SLURM_JOB_ID}-${timestamp}/mixtral_8x-22b_128N_run.bin
 export NCCL_PROTO=Simple
 export NCCL_IB_TIMEOUT=20
 export NCCL_IB_TC=41
 export NCCL_IB_SL=0
 
-export GLOO_SOCKET_IFNAME=ens51f1np1
+export GLOO_SOCKET_IFNAME=${NCCL_SOCKET_IFNAME}
 export NCCL_CROSS_NIC=0
 export NCCL_CHECKS_DISABLE=1
 export NCCL_IB_QPS_PER_CONNECTION=1
@@ -101,21 +98,21 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true --xla_gpu_enabl
 rm -rf /app/.cache/*
 python3 setup.py develop
 
-EXP_NAME="WAN_train"
+EXP_NAME="train"
 LOG_FILE="$LOG_PATH/output_$HOST_NAME.log"
+
 
 # python -m src.maxdiffusion.train_flux src/maxdiffusion/configs/base_flux_dev.yml \
 python -m src.maxdiffusion.train_wan src/maxdiffusion/configs/base_wan_14b.yml \
-        run_name="run_$EXP_NAME" output_dir="$PWD/output" \
+        run_name="run_$EXP_NAME" output_dir="$LOG_PATH" \
         hardware=gpu \
         attention=cudnn_flash_te \
-        max_train_steps=10 \
-        dcn_data_parallelism=-1 \
-        dcn_fsdp_batch_parallelism=1 \
+        max_train_steps=20 \
+        dcn_data_parallelism=1 \
+        dcn_fsdp_parallelism=-1 \
         ici_data_parallelism=1 \
         ici_fsdp_parallelism=8 \
         per_device_batch_size=1 \
-        enable_ssim=False \
         "${FILTERED_ARGS[@]}" |& tee -a "$LOG_FILE"
 
 

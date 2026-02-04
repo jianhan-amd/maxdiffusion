@@ -9,12 +9,12 @@
 #   bash wan_multinode_train_build_docker.sh "node1,node2,node3"
 #   bash wan_multinode_train_build_docker.sh  # Uses default node list
 # 
-# Environment Variables:
-#   IMAGE_TAG              - Docker image name (default: maxdiffusion-multinode-train:v1)
-#   MULTI_NODES_LOG_DIR    - Base log directory (default: /home/amd/jianhan/multi_node_log)
+# Environment Variables (required - should be set by wrapper script):
+#   IMAGE_TAG              - Docker image name
+#   MULTI_NODES_LOG_DIR    - Base log directory
 #   SHARE_DOCKERFILE_PATH  - Path to Dockerfile
-#   REGISTRY_USERNAME      - Docker Hub username (default: rocmshared)
-#   REGISTRY_TOKEN         - Docker Hub token (required for login)
+#   REGISTRY_USERNAME      - Docker Hub username
+#   REGISTRY_TOKEN         - Docker Hub token
 #
 
 set -euo pipefail
@@ -29,7 +29,7 @@ readonly TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 # Node list - comma separated hostnames
 if [ -z "${1:-}" ]; then
     # Default node list (edit this as needed)
-    NODE_LIST="core42-5-a08u01,core42-1-a08u07,core42-3-a08u19,core42-4-a08u25"
+    NODE_LIST="core42-4-a08u25"
 else
     NODE_LIST="$1"
 fi
@@ -38,14 +38,14 @@ fi
 IFS=',' read -ra NODES <<< "$NODE_LIST"
 readonly NNODES=${#NODES[@]}
 
-# Docker configuration
-readonly IMAGE_TAG="${IMAGE_TAG:-maxdiffusion-multinode-train:v1}"
-readonly REGISTRY_USERNAME="${REGISTRY_USERNAME:-rocmshared}"
-readonly REGISTRY_TOKEN="${REGISTRY_TOKEN:-dckr_pat_j1KReWSplnekgC56SucqKukqbUw}"
+# Docker configuration (should be set by wrapper script)
+readonly IMAGE_TAG="${IMAGE_TAG}"
+readonly REGISTRY_USERNAME="${REGISTRY_USERNAME}"
+readonly REGISTRY_TOKEN="${REGISTRY_TOKEN}"
 
-# Paths configuration
-readonly MULTI_NODES_LOG_DIR="${MULTI_NODES_LOG_DIR:-/home/amd/jianhan/multi_node_log}"
-readonly SHARE_DOCKERFILE_PATH="${SHARE_DOCKERFILE_PATH:-/home/amd/jianhan/github/maxdiffusion/multi_node/docker/jax_maxdiffusion_wan2.1_train_inference.ubuntu.amd.Dockerfile}"
+# Paths configuration (should be set by wrapper script)
+readonly MULTI_NODES_LOG_DIR="${MULTI_NODES_LOG_DIR}"
+readonly SHARE_DOCKERFILE_PATH="${SHARE_DOCKERFILE_PATH}"
 readonly DOCKERFILE_DIR="$(dirname "$SHARE_DOCKERFILE_PATH")"
 
 # Retry configuration
@@ -125,7 +125,6 @@ for node in "${NODES[@]}"; do
                 echo \"[$(hostname)] ✓ Docker Hub login successful\"
             else
                 echo \"[$(hostname)] ✗ Docker Hub login failed\"
-                exit 1
             fi
             
             # Build Docker image

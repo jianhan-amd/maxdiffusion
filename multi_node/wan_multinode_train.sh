@@ -39,7 +39,7 @@ readonly TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 # Node list - first argument
 if [ -z "${1:-}" ]; then
     # Default node list (edit this as needed)
-    NODE_LIST="core42-5-a08u01,core42-1-a08u07,core42-3-a08u19,core42-4-a08u25"
+    NODE_LIST="core42-4-a08u25"
 else
     NODE_LIST="$1"
 fi
@@ -51,15 +51,18 @@ readonly CMD_RUN="${2:-}"
 IFS=',' read -ra NODES <<< "$NODE_LIST"
 readonly NNODES=${#NODES[@]}
 
-# Default configuration values
-readonly COORDINATOR_IP="${COORDINATOR_IP:-172.29.0.73}"
-readonly IMAGE_TAG="${IMAGE_TAG:-maxdiffusion-multinode-train:v1}"
-readonly MULTI_NODES_LOG_DIR="${MULTI_NODES_LOG_DIR:-/home/amd/jianhan/multi_node_log}"
-readonly SHARE_DOCKERFILE_PATH="${SHARE_DOCKERFILE_PATH:-/home/amd/jianhan/github/maxdiffusion/multi_node/docker/jax_maxdiffusion_wan2.1_train_inference.ubuntu.amd.Dockerfile}"
-readonly SHARED_CODE_BASE_PATH="${SHARED_CODE_BASE_PATH:-/home/amd/jianhan/github/maxdiffusion}"
-readonly MAXDIFFUSION_DIR_IN_DOCKER="${MAXDIFFUSION_DIR_IN_DOCKER:-/app/maxdiffusion}"
-readonly RUN_NAME="${RUN_NAME:-WAN_14B_FSDP8}"
-readonly REMOVE_IMAGES="${REMOVE_IMAGES:-n}"
+# Configuration values (must be set as environment variables)
+readonly COORDINATOR_IP="${COORDINATOR_IP}"
+readonly IMAGE_TAG="${IMAGE_TAG}"
+readonly MULTI_NODES_LOG_DIR="${MULTI_NODES_LOG_DIR}"
+readonly SHARE_DOCKERFILE_PATH="${SHARE_DOCKERFILE_PATH}"
+readonly SHARED_CODE_BASE_PATH="${SHARED_CODE_BASE_PATH}"
+readonly MAXDIFFUSION_DIR_IN_DOCKER="${MAXDIFFUSION_DIR_IN_DOCKER}"
+readonly RUN_NAME="${RUN_NAME}"
+readonly REMOVE_IMAGES="${REMOVE_IMAGES}"
+readonly CHMOD_RUN="${CHMOD_RUN}"
+readonly REGISTRY_USERNAME="${REGISTRY_USERNAME}"
+readonly REGISTRY_TOKEN="${REGISTRY_TOKEN}"
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -85,31 +88,41 @@ Arguments:
   nodes   - Comma-separated list of node hostnames
             Leave empty to use default node list
 
-Environment Variables:
-  COORDINATOR_IP            - JAX coordinator IP (default: 172.29.0.73)
-  IMAGE_TAG                 - Docker image name (default: maxdiffusion-multinode-train:v1)
-  MULTI_NODES_LOG_DIR       - Base log directory (default: /home/amd/jianhan/multi_node_log)
-  SHARED_CODE_BASE_PATH     - Codebase path (default: /home/amd/jianhan/github/maxdiffusion)
-  MAXDIFFUSION_DIR_IN_DOCKER - Docker mount path (default: /app/maxdiffusion)
-  RUN_NAME                  - Experiment name prefix (default: WAN_14B_FSDP8)
-  REMOVE_IMAGES             - Remove Docker images on clean? y/n (default: n)
+Environment Variables (all required):
+  COORDINATOR_IP            - JAX coordinator IP
+  IMAGE_TAG                 - Docker image name
+  MULTI_NODES_LOG_DIR       - Base log directory
+  SHARED_CODE_BASE_PATH     - Codebase path
+  SHARE_DOCKERFILE_PATH     - Path to Dockerfile
+  MAXDIFFUSION_DIR_IN_DOCKER - Docker mount path
+  RUN_NAME                  - Experiment name prefix
+  REMOVE_IMAGES             - Remove Docker images on clean? y/n
+  CHMOD_RUN                 - for running a chmod on codebase only
+  REGISTRY_USERNAME         - Docker Hub username
+  REGISTRY_TOKEN            - Docker Hub token
 
 Examples:
+  # Set all required environment variables first
+  export COORDINATOR_IP="172.29.0.73"
+  export IMAGE_TAG="maxdiffusion-multinode-train:v1"
+  export MULTI_NODES_LOG_DIR="your/log/directory"
+  export SHARED_CODE_BASE_PATH="your/code/base/maxdiffusion"
+  export MAXDIFFUSION_DIR_IN_DOCKER="/app/maxdiffusion"
+  export RUN_NAME="your/experiment/name"
+  export REMOVE_IMAGES="n"
+  export CHMOD_RUN="n"
+  export REGISTRY_USERNAME="your_username_here"
+  export REGISTRY_TOKEN="your_token_here"
+  export SHARE_DOCKERFILE_PATH="your.Dockerfile"
+
   # Clean and sync using specific nodes
   $SCRIPT_NAME "node1,node2,node3" clean
 
-  # Build images using default nodes
-  $SCRIPT_NAME "" build
+  # Build images
+  $SCRIPT_NAME "node1,node2,node3" build
 
-  # Launch training with custom settings
-  export RUN_NAME="WAN_1_3B_FSDP8"
-  export REMOVE_IMAGES="y"
-  $SCRIPT_NAME "node1,node2" launch
-
-  # Full workflow
-  $SCRIPT_NAME "node1,node2" clean
-  $SCRIPT_NAME "node1,node2" build
-  $SCRIPT_NAME "node1,node2" launch
+  # Launch training
+  $SCRIPT_NAME "node1,node2,node3" launch
 
 EOF
 }
@@ -126,6 +139,7 @@ print_config() {
     echo "  COORDINATOR_IP:    $COORDINATOR_IP"
     echo "  RUN_NAME:          $RUN_NAME"
     echo "  REMOVE_IMAGES:     $REMOVE_IMAGES"
+    echo "  REGISTRY_USERNAME: $REGISTRY_USERNAME"
     echo "  LOG_DIR:           $MULTI_NODES_LOG_DIR"
     echo "  CODE_PATH:         $SHARED_CODE_BASE_PATH"
     echo "========================================"
@@ -163,6 +177,8 @@ run_build() {
     export IMAGE_TAG
     export MULTI_NODES_LOG_DIR
     export SHARE_DOCKERFILE_PATH
+    export REGISTRY_USERNAME
+    export REGISTRY_TOKEN
     
     # Run build script
     if bash "${SCRIPT_DIR}/wan_multinode_train_build_docker.sh" "$NODE_LIST"; then
@@ -186,6 +202,7 @@ run_launch() {
     export SHARED_CODE_BASE_PATH
     export MAXDIFFUSION_DIR_IN_DOCKER
     export RUN_NAME
+    export CHMOD_RUN
     
     # Run launch script
     if bash "${SCRIPT_DIR}/wan_multinode_train_launch.sh" "$NODE_LIST"; then
