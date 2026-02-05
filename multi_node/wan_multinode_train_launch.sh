@@ -52,7 +52,7 @@ fi
 readonly IMAGE_TAG="${IMAGE_TAG}"
 readonly COORDINATOR_IP="${COORDINATOR_IP}"
 readonly JAX_COORDINATOR_PORT=12345
-readonly COORDINATOR_TIMEOUT=1800
+readonly COORDINATOR_TIMEOUT=180
 
 # Paths configuration (should be set by wrapper script)
 readonly MULTI_NODES_LOG_DIR="${MULTI_NODES_LOG_DIR}"

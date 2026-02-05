@@ -161,7 +161,7 @@ for node in "${NODES[@]}"; do
         continue
     }
     
-    if rsync -az --delete --info=progress2 -e "ssh" \
+    if rsync -az --delete --omit-dir-times --info=progress2 -e "ssh" \
         "$SHARED_CODE_BASE_PATH/" "$node:$SHARED_CODE_BASE_PATH/" \
         > "${LOG_DIR}/sync_${node}.log" 2>&1; then
         echo "[${node}] ✓ Sync completed"

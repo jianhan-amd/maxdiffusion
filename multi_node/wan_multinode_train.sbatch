@@ -104,7 +104,7 @@ echo "Building the container image on all nodes"
 srun bash -c '
     MAX_RETRIES=5
     INITIAL_DELAY=30 # seconds
-    MAX_DELAY=1800 # seconds
+    MAX_DELAY=180 # seconds
     RETRY_COUNT=0
 
     while true; do
