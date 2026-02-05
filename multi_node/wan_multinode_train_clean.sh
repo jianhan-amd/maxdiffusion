@@ -152,7 +152,14 @@ echo ""
 
 sync_failed=()
 for node in "${NODES[@]}"; do
-    echo "[${node}] Syncing codebase..."
+    echo "[${node}] Creating directory and syncing codebase..."
+    
+    # Create the directory on remote node
+    ssh "$node" "mkdir -p '$SHARED_CODE_BASE_PATH'" || {
+        echo "[${node}] ✗ Failed to create directory"
+        sync_failed+=("$node")
+        continue
+    }
     
     if rsync -az --delete --info=progress2 -e "ssh" \
         "$SHARED_CODE_BASE_PATH/" "$node:$SHARED_CODE_BASE_PATH/" \
