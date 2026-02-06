@@ -78,7 +78,7 @@ def l2norm_pytree(x):
 
 def activate_profiler(config):
   if jax.process_index() == 0 and config.enable_profiler:
-    jax.profiler.start_trace(config.tensorboard_dir)
+    jax.profiler.start_trace(config.tensorboard_dir, create_perfetto_trace=True)
 
 
 def deactivate_profiler(config):
