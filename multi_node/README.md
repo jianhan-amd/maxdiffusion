@@ -105,7 +105,8 @@ bash run_multinode_train.sh
 
 ```bash
 # Change model
-export RUN_NAME="WAN_1_3B_FSDP8"  # or WAN_14B_FSDP8
+# Please also change between pretrained_model_name_or_path: 'Wan-AI/Wan2.1-T2V-14B-Diffusers' or 'Wan-AI/Wan2.1-T2V-1.3B-Diffusers' under src/maxdiffusion/configs/base_wan_14b.yml
+export RUN_NAME="WAN_14B_FSDP8"  # or WAN_1_3B_FSDP8
 
 # Remove Docker images (free disk space)
 export REMOVE_IMAGES="y"
