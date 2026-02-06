@@ -97,6 +97,7 @@ export XLA_FLAGS="--xla_gpu_enable_latency_hiding_scheduler=true --xla_gpu_enabl
 
 rm -rf /app/.cache/*
 python3 setup.py develop
+ulimit -n 4096
 
 EXP_NAME="train"
 LOG_FILE="$LOG_PATH/output_$HOST_NAME.log"

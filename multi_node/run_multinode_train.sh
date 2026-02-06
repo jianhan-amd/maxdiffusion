@@ -17,7 +17,9 @@ export REGISTRY_TOKEN=""
 export CHMOD_RUN=n
 
 # Define node list
-NODES="core42-1-a08u07,core42-3-a08u19,core42-4-a08u25,core42-5-a08u01"
+# Please put the JAX COORDINATOR to the first of the list. The JAX COORDINATOR node will be launched before others to make sure all nodes can connect to the JAX COORDINATOR service.
+# core42-4-a08u25:172.29.0.73
+NODES="core42-4-a08u25,core42-1-a08u07,core42-3-a08u19,core42-5-a08u01"
 
 # 1. Clean and sync codebase
 # To remove Docker images during cleanup, uncomment the line below:
@@ -27,7 +29,4 @@ bash wan_multinode_train.sh "$NODES" clean
 bash wan_multinode_train.sh "$NODES" build
 
 # # 3. Launch training
-# Please put the JAX COORDINATOR to the first of the list. The JAX COORDINATOR node will be launched before others to make sure all nodes can connect to the JAX COORDINATOR service.
-# core42-4-a08u25:172.29.0.73
-NODES="core42-4-a08u25,core42-1-a08u07,core42-3-a08u19,core42-5-a08u01"
 bash wan_multinode_train.sh "$NODES" launch
