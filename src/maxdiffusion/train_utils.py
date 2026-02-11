@@ -206,11 +206,11 @@ def transformer_engine_context():
     from transformer_engine.jax.sharding import global_shard_guard, MeshResource
     # Inform TransformerEngine of MaxDiffusion's physical mesh resources.
     mesh_resource = MeshResource(
-        dp_resource="data",
-        tp_resource="tensor",
-        fsdp_resource="fsdp",
+        dp_resource=None,
+        tp_resource=None,
+        fsdp_resource=None,
         pp_resource=None,
-        cp_resource=None,
+        cp_resource="context",
     )
     with global_shard_guard(mesh_resource):
       yield

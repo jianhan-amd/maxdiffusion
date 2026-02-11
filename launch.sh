@@ -25,6 +25,7 @@ export HF_HOME="/app/hf_home/"
 export MIOPEN_CUSTOM_CACHE_DIR="/app/.cache/miopen/"
 export JAX_COMPILATION_CACHE_DIR="/app/.cache/jax/"
 export JAX_PERSISTENT_CACHE_ENABLE_XLA_CACHES="all"
+export JAX_USE_SHARDY_PARTITIONER=0
 
 # export TF_CPP_MIN_LOG_LEVEL=0
 # export TF_CPP_MAX_VLOG_LEVEL=3
