@@ -1,0 +1,20 @@
+diff --git a/src/maxdiffusion/trainers/flux_trainer.py b/src/maxdiffusion/trainers/flux_trainer.py
+--- a/src/maxdiffusion/trainers/flux_trainer.py
++++ b/src/maxdiffusion/trainers/flux_trainer.py
+@@ -20,5 +20,6 @@
+ import time
+ import numpy as np
+ import jax
+ import jax.numpy as jnp
++import optax
+ from jax.sharding import NamedSharding, PartitionSpec as P
+@@ -442,6 +442,9 @@
+   grad_fn = jax.value_and_grad(compute_loss)
+   loss, grad = grad_fn(state_params)
+ 
++  if config.max_grad_norm > 0:
++    grad, _ = optax.clip_by_global_norm(config.max_grad_norm).update(grad, flux_state, None)
++
+   new_state = flux_state.apply_gradients(grads=grad[FLUX_STATE_KEY])
+ 
+   metrics = {"scalar": {"learning/loss": loss}, "scalars": {}}

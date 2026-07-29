@@ -1,0 +1,21 @@
+diff --git a/src/maxdiffusion/trainers/wan_trainer.py b/src/maxdiffusion/trainers/wan_trainer.py
+--- a/src/maxdiffusion/trainers/wan_trainer.py
++++ b/src/maxdiffusion/trainers/wan_trainer.py
+@@ -24,5 +24,6 @@
+ import tensorflow as tf
+ import jax.numpy as jnp
+ import jax
++import optax
+ from jax.sharding import PartitionSpec as P
+ from flax import nnx
+@@ -481,6 +481,10 @@
+ 
+   grad_fn = nnx.value_and_grad(loss_fn)
+   loss, grads = grad_fn(state.params)
++
++  if config.max_grad_norm > 0:
++    grads, _ = optax.clip_by_global_norm(config.max_grad_norm).update(grads, state.params, None)
++
+   new_state = state.apply_gradients(grads=grads)
+   metrics = {"scalar": {"learning/loss": loss}, "scalars": {}}
+   return new_state, scheduler_state, metrics, new_rng
